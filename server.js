@@ -1,10 +1,13 @@
 const express = require('express');
 const path = require('path');
 const app = express();
-
+ 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(__dirname));
-
+ 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+ 
 app.post('/api/claude', async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -28,6 +31,7 @@ app.post('/api/claude', async (req, res) => {
     res.status(500).json({ error: { message: err.message } });
   }
 });
-
+ 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`CareRender running on port ${PORT}`));
+ 
