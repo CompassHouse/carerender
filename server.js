@@ -1,6 +1,20 @@
 {
   "name": "carerender",
   "version": "3.0.0",
+  "description": "CareRender — Compass House",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}{
+  "name": "carerender",
+  "version": "3.0.0",
   "description": "CareRender v3 — Compass House. Real names with PII scrubbing.",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
