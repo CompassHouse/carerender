@@ -1,9 +1,15 @@
 {
   "name": "carerender",
-  "version": "1.0.0",
-  "description": "CareRender - Compass House NDIS Documentation Tool",
+  "version": "4.0.0",
+  "description": "CareRender — Compass House AI Shift Documentation",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "dependencies": { "express": "^4.18.2" },
-  "engines": { "node": ">=18.0.0" }
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
