@@ -1,18 +1,3 @@
-{
-  "name": "carerender",
-  "version": "3.0.0",
-  "description": "CareRender — Compass House",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
-}
 const express = require('express');
 const app = express();
 app.use(express.json({ limit: '50mb' }));
