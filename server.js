@@ -501,14 +501,14 @@ async function doAnalysis() {
     try {
       var sums = [];
       for (var i = 0; i < chunks.length; i++) {
-        var r = await callClaude([{role:'user',content:'Summarise part '+(i+1)+' of '+chunks.length+' of a support worker shift note. Extract ALL key facts including every timestamp, activity, behaviour, incident, and appointment. Preserve all timestamps exactly.\n\nPart '+(i+1)+':\n'+chunks[i]}], 1500);
+        var r = await callClaude([{role:'user',content:'Summarise part '+(i+1)+' of '+chunks.length+' of a support worker shift note. Extract ALL key facts including every timestamp, activity, behaviour, incident, and appointment. Preserve all timestamps exactly.\\n\\nPart '+(i+1)+':\\n'+chunks[i]}], 1500);
         sums.push(r);
       }
-      fullNarr = sums.join('\n\n');
+      fullNarr = sums.join('\\n\\n');
     } catch(e) {console.error('Chunk error',e);}
   }
 
-  var prompt = 'Analyse this NDIS support worker shift note. Identify what happened and what gaps exist.\n\nSHIFT HEADER (already captured):\n' + sHdr + '\n\nSHIFT NOTES:\n' + fullNarr + '\n\nReturn ONLY valid JSON:\n{\n  "found_incidents": ["list of detected incidents from: Escalation/Agitation, Behaviour of Concern, Disclosure, Safety Concern, Near Miss, Hospital Avoidance, Injury, Medication Incident, RP Used - Chemical Restraint, RP Used - Environmental Restraint, RP Used - Mechanical Restraint, RP Used - Physical Restraint, RP Used - Seclusion, Assault/Aggression Toward Others"],\n  "found_appointments": ["appointments or future events mentioned"],\n  "gap_questions": [{"id":"q1","question":"specific missing info question"}]\n}\n\nGap rules: max 4 questions. Never ask about supervisor notification, shift header details, or management contact. Return empty gap_questions if notes are sufficient.';
+  var prompt = 'Analyse this NDIS support worker shift note. Identify what happened and what gaps exist.\\n\\nSHIFT HEADER (already captured):\\n' + sHdr + '\\n\\nSHIFT NOTES:\\n' + fullNarr + '\\n\\nReturn ONLY valid JSON:\\n{\\n  "found_incidents": ["list of detected incidents from: Escalation/Agitation, Behaviour of Concern, Disclosure, Safety Concern, Near Miss, Hospital Avoidance, Injury, Medication Incident, RP Used - Chemical Restraint, RP Used - Environmental Restraint, RP Used - Mechanical Restraint, RP Used - Physical Restraint, RP Used - Seclusion, Assault/Aggression Toward Others"],\\n  "found_appointments": ["appointments or future events mentioned"],\\n  "gap_questions": [{"id":"q1","question":"specific missing info question"}]\\n}\\n\\nGap rules: max 4 questions. Never ask about supervisor notification, shift header details, or management contact. Return empty gap_questions if notes are sufficient.';
 
   try {
     var res = await callClaude([{role:'user',content:prompt}], 800);
@@ -556,18 +556,18 @@ async function genDocs() {
   var gaps = '';
   if (analysis.gap_questions) analysis.gap_questions.forEach(function(q) {
     var el = document.getElementById('ans-'+q.id);
-    if (el && el.value.trim()) gaps += 'Q: ' + q.question + '\nA: ' + el.value.trim() + '\n';
+    if (el && el.value.trim()) gaps += 'Q: ' + q.question + '\\nA: ' + el.value.trim() + '\\n';
   });
 
   var noteInst = nStyle === 's'
     ? 'SIMPLE NOTE: Concise prose. 150-200 words maximum. No bullet points. Cover: arrival presentation, main support provided, any notable moments, departure state.'
-    : 'EXTENSIVE NOTE - MANDATORY REQUIREMENTS:\n(1) PRESERVE ALL TIMESTAMPS: Every timestamp the worker wrote MUST appear as its own separate dot point. If the worker gave 10 timestamps, produce at minimum 10 separate timestamped entries. NEVER combine or bundle timestamps together.\n(2) FORMAT: Each entry begins with the exact time (e.g. 09:00 or 09:00-09:30) followed by a colon, then the clinical detail.\n(3) LENGTH: Minimum 1800 words. Do not truncate or abbreviate. This is a clinical document for a complex psychosocial participant.\n(4) CONTENT PER ENTRY: For each timestamped entry include: the participant polyvagal/regulatory state with specific observed behaviours, the support worker intervention technique named explicitly, the participant response to that intervention, and any clinically relevant observations.\n(5) Include alter presentations by name if applicable, functional capacity changes, de-escalation sequences step by step, and handover notes at the end.';
+    : 'EXTENSIVE NOTE - MANDATORY REQUIREMENTS:\\n(1) PRESERVE ALL TIMESTAMPS: Every timestamp the worker wrote MUST appear as its own separate dot point. If the worker gave 10 timestamps, produce at minimum 10 separate timestamped entries. NEVER combine or bundle timestamps together.\\n(2) FORMAT: Each entry begins with the exact time (e.g. 09:00 or 09:00-09:30) followed by a colon, then the clinical detail.\\n(3) LENGTH: Minimum 1800 words. Do not truncate or abbreviate. This is a clinical document for a complex psychosocial participant.\\n(4) CONTENT PER ENTRY: For each timestamped entry include: the participant polyvagal/regulatory state with specific observed behaviours, the support worker intervention technique named explicitly, the participant response to that intervention, and any clinically relevant observations.\\n(5) Include alter presentations by name if applicable, functional capacity changes, de-escalation sequences step by step, and handover notes at the end.';
 
   var rpGuidance = 'REGULATED RESTRICTIVE PRACTICES: If a restrictive practice is detected, classify it as: Chemical Restraint (medication for behaviour), Environmental Restraint (restricting access to environment/items/areas), Mechanical Restraint (device to restrict movement for behaviour), Physical Restraint (physical force to restrict movement for behaviour), or Seclusion (sole confinement preventing voluntary exit). An RP is a reportable incident ONLY if it was UNAUTHORISED (not in accordance with an authorised BSP or state/territory authorisation). Authorised RP used in accordance with the BSP is NOT a reportable incident but must be documented.';
 
-  var incFmt = '"incidents": [\n  {\n    "type": "descriptive incident title",\n    "reportable": true or false (true ONLY for: death, serious injury, abuse/neglect, unlawful physical contact, unlawful sexual contact/misconduct, UNAUTHORISED restrictive practice),\n    "ndis_category": "which NDIS reportable category or N/A",\n    "notification_timeline": "24 hours (death/serious injury/abuse/sexual) or 5 business days (unauthorised RP unless harm then 24hr) or N/A",\n    "before": "Context before the incident: environment, participant state, activities, build-up, potential triggers identified",\n    "during": "What happened: exact behaviours, disclosures, events, worker actions in the moment, any RP used and how",\n    "after": "Resolution: participant state after, stabilisation strategies, environment at end, ongoing concerns",\n    "actions_taken": "Actions taken and follow-up required. Do NOT include any instruction to call management - provider receives real-time Shiftcare notifications. For reportable incidents only: note NDIS Commission notification requirement."\n  }\n]';
+  var incFmt = '"incidents": [\\n  {\\n    "type": "descriptive incident title",\\n    "reportable": true or false (true ONLY for: death, serious injury, abuse/neglect, unlawful physical contact, unlawful sexual contact/misconduct, UNAUTHORISED restrictive practice),\\n    "ndis_category": "which NDIS reportable category or N/A",\\n    "notification_timeline": "24 hours (death/serious injury/abuse/sexual) or 5 business days (unauthorised RP unless harm then 24hr) or N/A",\\n    "before": "Context before the incident: environment, participant state, activities, build-up, potential triggers identified",\\n    "during": "What happened: exact behaviours, disclosures, events, worker actions in the moment, any RP used and how",\\n    "after": "Resolution: participant state after, stabilisation strategies, environment at end, ongoing concerns",\\n    "actions_taken": "Actions taken and follow-up required. Do NOT include any instruction to call management - provider receives real-time Shiftcare notifications. For reportable incidents only: note NDIS Commission notification requirement."\\n  }\\n]';
 
-  var prompt = 'You are an NDIS psychosocial disability support documentation specialist.\n\n' + rpGuidance + '\n\nSHIFT HEADER (use participant CODE only - real name added after):\n' + sHdr + '\n\nWORKER ACCOUNT:\n' + narr + (gaps ? '\nADDITIONAL INFO:\n' + gaps : '') + '\n\nDETECTED INCIDENTS: ' + (analysis.found_incidents.join(', ')||'None') + '\nDETECTED APPOINTMENTS: ' + (analysis.found_appointments.join(', ')||'None') + '\n\nGenerate as one JSON object:\n{\n  "shift_note": {\n    "header": "Participant [code] | [Date] | [Time range] | [Duration] | Ratio [ratio] | [transport if applicable]",\n    "body": "' + noteInst + ' CRITICAL: Do not repeat header info in body. Refer to participant as the participant throughout (name added after). Use person-centred strengths-based NDIS language."\n  },\n  ' + incFmt + ',\n  "appointments": [{"type":"","date_time":"","details":""}]\n}\n\nReturn ONLY valid JSON. No other text.';
+  var prompt = 'You are an NDIS psychosocial disability support documentation specialist.\\n\\n' + rpGuidance + '\\n\\nSHIFT HEADER (use participant CODE only - real name added after):\\n' + sHdr + '\\n\\nWORKER ACCOUNT:\\n' + narr + (gaps ? '\\nADDITIONAL INFO:\\n' + gaps : '') + '\\n\\nDETECTED INCIDENTS: ' + (analysis.found_incidents.join(', ')||'None') + '\\nDETECTED APPOINTMENTS: ' + (analysis.found_appointments.join(', ')||'None') + '\\n\\nGenerate as one JSON object:\\n{\\n  "shift_note": {\\n    "header": "Participant [code] | [Date] | [Time range] | [Duration] | Ratio [ratio] | [transport if applicable]",\\n    "body": "' + noteInst + ' CRITICAL: Do not repeat header info in body. Refer to participant as the participant throughout (name added after). Use person-centred strengths-based NDIS language."\\n  },\\n  ' + incFmt + ',\\n  "appointments": [{"type":"","date_time":"","details":""}]\\n}\\n\\nReturn ONLY valid JSON. No other text.';
 
   try {
     var res = await callClaude([{role:'user',content:prompt}], 6000);
@@ -584,7 +584,7 @@ async function genDocs() {
       }
       return inc;
     });
-    saveBackup(docs.shift_note.header + '\n\n' + docs.shift_note.body);
+    saveBackup(docs.shift_note.header + '\\n\\n' + docs.shift_note.body);
     renderDocs(docs);
   } catch(e) {
     document.getElementById('l4').classList.add('hidden');
@@ -601,7 +601,7 @@ function renderDocs(docs) {
   out.innerHTML = '';
 
   // Shift note
-  var nt = docs.shift_note.header + '\n\n' + docs.shift_note.body;
+  var nt = docs.shift_note.header + '\\n\\n' + docs.shift_note.body;
   var nc = document.createElement('div');
   nc.className = 'oc note';
   nc.innerHTML = '<div class="och"><div class="oct">Shift Note - ready to copy into Shiftcare</div>' + cbtn('nt') + '</div><div class="ocb"><div class="otxt" id="nt">' + esc(nt) + '</div></div>';
@@ -615,11 +615,11 @@ function renderDocs(docs) {
     c.className = 'oc ' + (isR ? 'rep' : 'inc');
 
     var copyText = 'INCIDENT REPORT - ' + inc.type;
-    if (isR) copyText += '\n\nREPORTABLE INCIDENT\nNDIS Category: ' + (inc.ndis_category||'See NDIS Commission') + '\nNotification required: ' + (inc.notification_timeline||'Within 24 hours');
-    copyText += '\n\nBEFORE\n' + (inc.before||'Not documented');
-    copyText += '\n\nDURING\n' + (inc.during||'Not documented');
-    copyText += '\n\nAFTER\n' + (inc.after||'Not documented');
-    copyText += '\n\nACTIONS TAKEN\n' + (inc.actions_taken||'Not documented');
+    if (isR) copyText += '\\n\\nREPORTABLE INCIDENT\\nNDIS Category: ' + (inc.ndis_category||'See NDIS Commission') + '\\nNotification required: ' + (inc.notification_timeline||'Within 24 hours');
+    copyText += '\\n\\nBEFORE\\n' + (inc.before||'Not documented');
+    copyText += '\\n\\nDURING\\n' + (inc.during||'Not documented');
+    copyText += '\\n\\nAFTER\\n' + (inc.after||'Not documented');
+    copyText += '\\n\\nACTIONS TAKEN\\n' + (inc.actions_taken||'Not documented');
 
     var body = '<div class="ocb">';
     if (isR) {
@@ -644,7 +644,7 @@ function renderDocs(docs) {
     if (!apt.type || apt.type === '') return;
     var c = document.createElement('div');
     c.className = 'oc apt';
-    var t = 'APPOINTMENT - ' + apt.type + (apt.date_time ? '\nDate/Time: ' + apt.date_time : '') + '\nDetails: ' + (apt.details||'');
+    var t = 'APPOINTMENT - ' + apt.type + (apt.date_time ? '\\nDate/Time: ' + apt.date_time : '') + '\\nDetails: ' + (apt.details||'');
     c.innerHTML = '<div class="och"><div class="oct">Appointment: ' + esc(apt.type) + ' - For Tiarne to Roster</div>' + cbtn('apt'+i) + '</div><div class="ocb"><div class="otxt" id="apt' + i + '">' + esc(t) + '</div></div>';
     out.appendChild(c);
   });
@@ -747,9 +747,9 @@ function safeParse(str) {
     for (var i = 0; i < str.length; i++) {
       var ch = str[i];
       if (ch === '"' && prev !== '\\\\') inStr = !inStr;
-      if (inStr && ch === '\n') { f += '\\n'; prev = 'n'; continue; }
-      if (inStr && ch === '\r') { f += '\\r'; prev = 'r'; continue; }
-      if (inStr && ch === '\t') { f += '\\t'; prev = 't'; continue; }
+      if (inStr && ch === '\\n') { f += '\\\n'; prev = 'n'; continue; }
+      if (inStr && ch === '\\r') { f += '\\\r'; prev = 'r'; continue; }
+      if (inStr && ch === '\\t') { f += '\\\t'; prev = 't'; continue; }
       f += ch; prev = ch;
     }
     return JSON.parse(f);
