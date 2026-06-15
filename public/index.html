@@ -621,19 +621,29 @@ async function genDocs() {
 
   var styleInst = noteStyle === 's'
     ? 'SIMPLE NOTE: Concise professional prose. 150–200 words maximum. No bullet points. No headings. Single flowing narrative. Cover: arrival presentation, main support provided, notable moments, departure state.'
-    : 'EXTENSIVE NOTE: Timestamped dot points. 250–350 words. Each dot point starts with a time or time range (e.g. 09:00–09:30:). Include: arrival presentation with polyvagal/regulatory state and specific observed behaviours, each support intervention with technique named, escalation and de-escalation strategies, functional capacity observations, departure state.';
+    : 'EXTENSIVE NOTE: Timestamped dot points. Approximately 2000 words. Each dot point starts with a time or time range (e.g. 09:00–09:30:). Be thorough and detailed. Include: arrival presentation with full polyvagal/regulatory state description and specific observed behaviours, each activity and support intervention with the technique named and participant response documented, any escalations with full de-escalation sequence described, functional capacity observations throughout, alter presentations if applicable (name each alter and their presentation), mood and affect changes over the shift, worker decisions and clinical reasoning, departure state and any handover information. Every significant moment in the shift should be captured.';
 
-  var prompt = 'You are an NDIS psychosocial disability support documentation specialist.\n\nSHIFT HEADER (use ONLY the participant code — real name will be added separately):\n' + sHeader + '\n\nWORKER\'S ACCOUNT:\n' + narr + (gaps?'\n\nADDITIONAL INFO:\n'+gaps:'') + '\n\nDETECTED INCIDENTS: ' + (analysis.found_incidents.join(', ')||'None') + '\nDETECTED APPOINTMENTS: ' + (analysis.found_appointments.join(', ')||'None') + '\n\nGenerate as a single JSON object:\n{\n  "shift_note": {\n    "header": "Header line: Participant [code] | [Date] | [Start]–[End] | [Duration] | Ratio [ratio] | [transport if applicable]",\n    "body": "The note body. ' + styleInst + ' CRITICAL: Do NOT repeat any header information in the body. Do NOT mention the participant code, date, or worker name in the body. Refer to the participant as \'the participant\' throughout. Use person-centred, strengths-based NDIS language. Reference polyvagal states and functional capacity where relevant. No repetition of any kind."\n  },\n  "incidents": [{"type":"","reportable":false,"ndis_category":"","notification_timeline":"","summary":"","actions_taken":""}],\n  "appointments": [{"type":"","date_time":"","details":""}]\n}\n\nReturn ONLY the JSON. No other text.';
+  var incidentCriteria = 'NDIS REPORTABLE INCIDENT CRITERIA (6 categories):\n24-HOUR NOTIFICATION REQUIRED:\n1. Death of participant\n2. Serious injury (broken bones, head injury, hospital admission, significant impact on health/welfare/safety)\n3. Abuse or neglect (physical, psychological, financial, or sexual) by worker, another participant, or third party\n4. Unlawful sexual or physical contact or assault of participant\n5. Sexual misconduct against or in the presence of participant (including grooming)\n5-BUSINESS-DAY NOTIFICATION (or 24hr if resulted in harm):\n6. Unauthorised restrictive practice not in line with behaviour support plan\nNOTE: A disclosure of past or current abuse/non-consent triggers Category 3 or 4 assessment — escalate to clinical team. The 24-hour clock starts when KEY PERSONNEL (supervisor/manager) become aware, not the worker.';
+
+  var incidentFormat = '"incidents": [\n  {\n    "type": "descriptive incident title",\n    "reportable": true or false,\n    "ndis_category": "which of the 6 NDIS categories applies, or N/A if not reportable",\n    "notification_timeline": "24 hours to NDIS Commission, or 5 business days, or N/A",\n    "before": "What was happening before the incident — context, environment, participant state, activities, any build-up or triggers observed",\n    "during": "What happened during the incident — exact behaviours, disclosures, events, presentations, alter involvement if applicable, worker actions in the moment",\n    "after": "How the situation resolved — participant state after, stabilisation strategies used, environment at end of shift, any ongoing concerns",\n    "actions_taken": "Immediate actions taken and follow-up required — documentation, escalation, clinical review, safeguarding considerations",\n    "safeguarding_note": "Any safeguarding concerns or considerations (only include if relevant)"\n  }\n]';
+
+  var prompt = 'You are an NDIS psychosocial disability support documentation specialist working with complex psychosocial participants.\n\n' + incidentCriteria + '\n\nSHIFT HEADER (use ONLY the participant code — real name will be added separately):\n' + sHeader + '\n\nWORKER\'S ACCOUNT:\n' + narr + (gaps?'\n\nADDITIONAL INFO:\n'+gaps:'') + '\n\nDETECTED INCIDENTS: ' + (analysis.found_incidents.join(', ')||'None') + '\nDETECTED APPOINTMENTS: ' + (analysis.found_appointments.join(', ')||'None') + '\n\nGenerate as a single JSON object:\n{\n  "shift_note": {\n    "header": "Header line: Participant [code] | [Date] | [Start]–[End] | [Duration] | Ratio [ratio] | [transport if applicable]",\n    "body": "The note body. ' + styleInst + ' CRITICAL: Do NOT repeat any header information in the body. Do NOT mention the participant code, date, or worker name in the body. Refer to the participant as \'the participant\' throughout. Use person-centred, strengths-based NDIS language. Reference polyvagal states and functional capacity where relevant. No repetition of any kind.",\n    "word_count_target": "' + (noteStyle==='s'?'150-200':'approximately 2000') + '"\n  },\n  ' + incidentFormat + ',\n  "appointments": [{"type":"","date_time":"","details":""}]\n}\n\nReturn ONLY the JSON. No other text.';
 
   try {
-    var res = await callClaude([{role:'user',content:prompt}], 2500);
+    var res = await callClaude([{role:'user',content:prompt}], 6000);
     var clean = res.replace(/```json|```/g,'').trim();
     var docs = JSON.parse(clean);
     var fn = selP ? selP.firstName : '';
     docs.shift_note.header = buildHeader();
     if (fn) docs.shift_note.body = reinject(docs.shift_note.body, fn);
     if (docs.incidents) docs.incidents = docs.incidents.map(function(inc){
-      if (fn) { inc.summary = reinject(inc.summary||'', fn); inc.actions_taken = reinject(inc.actions_taken||'', fn); }
+      if (fn) {
+        inc.before = reinject(inc.before||'', fn);
+        inc.during = reinject(inc.during||'', fn);
+        inc.after = reinject(inc.after||'', fn);
+        inc.actions_taken = reinject(inc.actions_taken||'', fn);
+        inc.safeguarding_note = reinject(inc.safeguarding_note||'', fn);
+      }
       return inc;
     });
     saveBackup(docs.shift_note.header + '\n\n' + docs.shift_note.body);
@@ -660,12 +670,37 @@ function renderDocs(docs) {
     var isR = inc.reportable===true;
     var c = document.createElement('div');
     c.className = 'oc ' + (isR?'rep':'inc');
-    var t = 'INCIDENT REPORT — ' + inc.type + '\n\nSummary: ' + (inc.summary||'') + '\n\nActions taken: ' + (inc.actions_taken||'');
-    if (isR) t += '\n\nNDIS Category: ' + (inc.ndis_category||'See NDIS Commission') + '\nNotification required: ' + (inc.notification_timeline||'Within 24 hours');
+
+    // Build the copyable text in Before/During/After format
+    var t = 'INCIDENT REPORT — ' + inc.type;
+    if (isR) t += '\n\n⚠ REPORTABLE INCIDENT\nNDIS Category: ' + (inc.ndis_category||'See NDIS Commission') + '\nNotification required: ' + (inc.notification_timeline||'Within 24 hours to NDIS Commission');
+    t += '\n\nBEFORE\n' + (inc.before||'Not documented');
+    t += '\n\nDURING\n' + (inc.during||'Not documented');
+    t += '\n\nAFTER\n' + (inc.after||'Not documented');
+    t += '\n\nACTIONS TAKEN\n' + (inc.actions_taken||'Not documented');
+    if (inc.safeguarding_note && inc.safeguarding_note.trim() && inc.safeguarding_note!=='N/A') {
+      t += '\n\nSAFEGUARDING CONSIDERATIONS\n' + inc.safeguarding_note;
+    }
+
+    var sections = '<div class="ocb">';
+    if (isR) {
+      sections += '<div class="nbox" style="margin-bottom:12px"><h4>📋 NDIS Commission Notification</h4>';
+      sections += '<p><strong>Category:</strong> ' + esc(inc.ndis_category||'See Commission guidelines') + '</p>';
+      sections += '<p style="margin-top:4px"><strong>Timeline:</strong> ' + esc(inc.notification_timeline||'Within 24 hours') + '</p>';
+      sections += '<p style="margin-top:4px;font-size:12px;color:var(--grey)">Submit via NDIS Commission Portal. Clock starts when key personnel become aware.</p></div>';
+    }
+    sections += '<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);margin-bottom:4px">Before</div><div style="font-size:14px;line-height:1.6;color:var(--text)">' + esc(inc.before||'Not documented') + '</div></div>';
+    sections += '<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);margin-bottom:4px">During</div><div style="font-size:14px;line-height:1.6;color:var(--text)">' + esc(inc.during||'Not documented') + '</div></div>';
+    sections += '<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);margin-bottom:4px">After</div><div style="font-size:14px;line-height:1.6;color:var(--text)">' + esc(inc.after||'Not documented') + '</div></div>';
+    sections += '<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);margin-bottom:4px">Actions Taken</div><div style="font-size:14px;line-height:1.6;color:var(--text)">' + esc(inc.actions_taken||'Not documented') + '</div></div>';
+    if (inc.safeguarding_note && inc.safeguarding_note.trim() && inc.safeguarding_note!=='N/A') {
+      sections += '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;margin-bottom:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#92400E;margin-bottom:4px">Safeguarding Considerations</div><div style="font-size:14px;line-height:1.6;color:#78350F">' + esc(inc.safeguarding_note) + '</div></div>';
+    }
+    sections += '<div id="inc'+i+'" style="display:none">' + esc(t) + '</div></div>';
+
     c.innerHTML = (isR?'<div class="repalert">🚨 CALL MANAGEMENT NOW — Reportable Incident</div>':'') +
       '<div class="och"><div class="oct">' + (isR?'🚨':'⚠️') + ' ' + esc(inc.type) + '</div>' + cbtn('inc'+i) + '</div>' +
-      '<div class="ocb"><div class="otxt" id="inc' + i + '">' + esc(t) + '</div>' +
-      (isR?'<div class="nbox"><h4>Notification Timeline</h4><p>' + esc(inc.notification_timeline||'Within 24 hours') + '</p></div>':'') + '</div>';
+      sections;
     out.appendChild(c);
   });
   (docs.appointments||[]).forEach(function(apt,i){
