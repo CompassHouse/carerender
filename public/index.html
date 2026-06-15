@@ -301,7 +301,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="cb">
       <p style="font-size:14px;color:var(--grey);margin-bottom:16px">Workers select participants by real name. Names are stripped before reaching the AI — only codes are sent externally.</p>
-      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Current Participants</h3>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Current Participants <span id="adm-count" style="font-size:13px;font-weight:400;color:var(--grey)"></span></h3>
       <div id="adm-tbl"></div>
       <hr class="divhr">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:8px">How to Add or Edit Participants</h3>
@@ -621,7 +621,7 @@ async function genDocs() {
 
   var styleInst = noteStyle === 's'
     ? 'SIMPLE NOTE: Concise professional prose. 150–200 words maximum. No bullet points. No headings. Single flowing narrative. Cover: arrival presentation, main support provided, notable moments, departure state.'
-    : 'EXTENSIVE NOTE: Timestamped dot points. Approximately 2000 words. Each dot point starts with a time or time range (e.g. 09:00–09:30:). Be thorough and detailed. Include: arrival presentation with full polyvagal/regulatory state description and specific observed behaviours, each activity and support intervention with the technique named and participant response documented, any escalations with full de-escalation sequence described, functional capacity observations throughout, alter presentations if applicable (name each alter and their presentation), mood and affect changes over the shift, worker decisions and clinical reasoning, departure state and any handover information. Every significant moment in the shift should be captured.';
+    : 'EXTENSIVE NOTE — MANDATORY REQUIREMENTS:\n(1) TARGET LENGTH: Minimum 1800 words, ideally 2000+ words. This is a clinical document for a complex psychosocial participant. Do NOT abbreviate, summarise, or truncate. Write in full detail.\n(2) FORMAT: Every entry MUST be a separate timestamped dot point. Begin EVERY dot point with a specific time or time range (e.g. 09:00, 09:15–09:45, 10:30). NEVER bundle multiple timestamps together. If the worker has given you 10 timestamps, produce at minimum 10 separate timestamped entries — each fully expanded.\n(3) CONTENT PER ENTRY: For EACH timestamped entry write: the participant\'s polyvagal/regulatory state at that time with specific observed behaviours, the support worker\'s intervention technique named explicitly, the participant\'s response to that intervention, any change in state, and any clinically relevant observations.\n(4) ADDITIONAL DETAIL: Include alter presentations (name each alter, their state, what they communicated), functional capacity changes throughout the shift, de-escalation sequences step by step, worker clinical reasoning, and departure state with handover notes.\n(5) DO NOT compress the shift into fewer entries than the worker provided. Expand each one fully.';
 
   var incidentCriteria = 'NDIS REPORTABLE INCIDENT CRITERIA (6 categories):\n24-HOUR NOTIFICATION REQUIRED:\n1. Death of participant\n2. Serious injury (broken bones, head injury, hospital admission, significant impact on health/welfare/safety)\n3. Abuse or neglect (physical, psychological, financial, or sexual) by worker, another participant, or third party\n4. Unlawful sexual or physical contact or assault of participant\n5. Sexual misconduct against or in the presence of participant (including grooming)\n5-BUSINESS-DAY NOTIFICATION (or 24hr if resulted in harm):\n6. Unauthorised restrictive practice not in line with behaviour support plan\nNOTE: A disclosure of past or current abuse/non-consent triggers Category 3 or 4 assessment — escalate to clinical team. The 24-hour clock starts when KEY PERSONNEL (supervisor/manager) become aware, not the worker.';
 
@@ -763,9 +763,18 @@ function recoverNote() {
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 function renderAdminTable() {
   var c = document.getElementById('adm-tbl');
+  var countEl = document.getElementById('adm-count');
   if (!c) return;
+  if (countEl) countEl.textContent = '(' + participants.length + ' loaded from server)';
   if (!participants.length) {
-    c.innerHTML = '<p style="font-size:13px;color:var(--grey)">No participants configured yet.</p>';
+    c.innerHTML = '<div style="background:var(--red-l);border:1.5px solid #FCA5A5;border-radius:8px;padding:14px;font-size:13px;color:var(--red)">' +
+      '<strong>No participants loaded.</strong> Either the PARTICIPANTS environment variable is not set in Render, ' +
+      'the JSON format is incorrect, or you need to redeploy after adding it.<br><br>' +
+      '<strong>Check your Render env var matches this exact format:</strong><br><br>' +
+      '<code style="background:white;padding:4px 8px;border-radius:4px;font-size:12px;display:block;margin-top:6px">' +
+      '[{"code":"P01","firstName":"Belinda","lastName":"Hemmens"},{"code":"P02","firstName":"Jane","lastName":"Smith"}]' +
+      '</code><br>Note: double quotes only, no trailing commas, square brackets at start and end.' +
+      '</div>';
   } else {
     var h = '<table class="admtbl"><thead><tr><th>Code</th><th>First Name</th><th>Last Name</th><th>Shows in Dropdown As</th></tr></thead><tbody>';
     participants.forEach(function(p){ h+='<tr><td>'+esc(p.code)+'</td><td>'+esc(p.firstName)+'</td><td>'+esc(p.lastName||'')+'</td><td>'+esc(p.displayName)+'</td></tr>'; });
