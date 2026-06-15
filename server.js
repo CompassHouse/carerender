@@ -12,15 +12,7 @@
   "engines": {
     "node": ">=18.0.0"
   }
-}{
-  "name": "carerender",
-  "version": "3.0.0",
-  "description": "CareRender v3 — Compass House. Real names with PII scrubbing.",
-  "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=18.0.0" }
 }
-
 const express = require('express');
 const app = express();
 app.use(express.json({ limit: '50mb' }));
